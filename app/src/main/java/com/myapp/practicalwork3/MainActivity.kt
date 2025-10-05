@@ -1,6 +1,5 @@
 package com.myapp.practicalwork3
 
-import android.R.attr.text
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,24 +12,20 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.myapp.practicalwork3.ui.theme.PracticalWork3Theme
 import androidx.compose.ui.unit.dp
 import android.content.Intent
-import android.widget.Toast
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.TextField
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +38,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 val Context.dataStore by preferencesDataStore(name = "storage")
@@ -53,8 +47,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PracticalWork3Theme {
-                MainScreen()
+            var selectedTheme by remember { mutableStateOf("Default") }
+            val isDarkTheme = when (selectedTheme) {
+                "Dark theme" -> true
+                "Light theme" -> false
+                "Default theme" -> isSystemInDarkTheme() // default system theme setting
+                else -> isSystemInDarkTheme()
+            }
+            PracticalWork3Theme(darkTheme = isDarkTheme) {
+                MainScreen(
+                    selectedTheme = selectedTheme,
+                    onThemeChange = { selectedTheme = it }
+                )
             }
         }
     }
@@ -62,17 +66,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 @Preview
-fun MainScreen() {
+fun MainScreen(
+    selectedTheme: String,
+    onThemeChange: (String) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var inputText by remember { mutableStateOf("") }
     val SAVED_TEXT_KEY = stringPreferencesKey("saved_text")
-    // Load at startup
+    // load text at startup
     LaunchedEffect(Unit) {
         val prefs = context.dataStore.data.first()
         inputText = prefs[SAVED_TEXT_KEY] ?: ""
     }
+
+    var isThemeDropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column (
@@ -89,6 +98,26 @@ fun MainScreen() {
                         context.startActivity(Intent(context, SecondActivity::class.java))
                     }
                 )
+                Box {
+                    Button(onClick = { isThemeDropdownExpanded = true }) {
+                        Text(selectedTheme)
+                    }
+
+                    DropdownMenu(
+                        expanded = isThemeDropdownExpanded,
+                        onDismissRequest = { isThemeDropdownExpanded = false }
+                    ) {
+                        listOf("Default theme", "Light theme", "Dark theme").forEach { theme ->
+                            DropdownMenuItem(
+                                text = { Text(theme) },
+                                onClick = {
+                                    onThemeChange(theme)
+                                    isThemeDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
